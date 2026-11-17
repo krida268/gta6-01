@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>SOLMAR BAY — Kota ini milikmu</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1c2c;
+    font-family: "Trebuchet MS", Verdana, sans-serif; color: #fff; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .hidden { display: none !important; }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+  #minimap { position: absolute; top: 14px; right: 14px; width: 200px; height: 200px;
+    border: 3px solid rgba(255,255,255,.75); border-radius: 8px; background: rgba(10,30,45,.55); }
+  #wanted { position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+    font-size: 30px; letter-spacing: 4px; color: #ffd60a;
+    text-shadow: 0 0 8px #000, 0 2px 2px #000; }
+  #objective { position: absolute; top: 58px; left: 50%; transform: translateX(-50%);
+    max-width: 520px; text-align: center; font-size: 15px; font-weight: bold;
+    background: rgba(0,0,0,.55); padding: 8px 16px; border-radius: 20px;
+    border: 1px solid rgba(255,255,255,.25); }
+  #money { position: absolute; top: 14px; left: 14px; font-size: 26px; font-weight: bold;
+    color: #7CFC9A; text-shadow: 0 2px 3px #000; }
+  #health-wrap { position: absolute; left: 14px; bottom: 16px; width: 240px; }
+  #health-wrap .label { font-size: 12px; letter-spacing: 2px; margin-bottom: 4px;
+    text-shadow: 0 1px 2px #000; }
+  #health-bar-outer { height: 18px; background: rgba(0,0,0,.6); border: 2px solid #fff;
+    border-radius: 9px; overflow: hidden; }
+  #health-bar { height: 100%; width: 100%; background: linear-gradient(90deg, #2ecc71, #a9dfbf);
+    transition: width .2s; }
+  #ammo { position: absolute; right: 14px; bottom: 16px; font-size: 22px; font-weight: bold;
+    text-shadow: 0 2px 3px #000; }
+  #speed { position: absolute; right: 14px; bottom: 52px; font-size: 18px;
+    text-shadow: 0 2px 3px #000; }
+  #message { position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%);
+    font-size: 18px; font-weight: bold; text-align: center;
+    text-shadow: 0 2px 4px #000; }
+  #controls-hint { position: absolute; left: 14px; bottom: 64px; font-size: 12px;
+    opacity: .8; text-shadow: 0 1px 2px #000; line-height: 1.5; }
+
+  /* ---------- Overlay layar penuh ---------- */
+  .overlay { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    background: linear-gradient(180deg, rgba(6,32,54,.82), rgba(3,16,28,.92)); }
+  .overlay h1 { margin: 0; font-size: 64px; letter-spacing: 8px; color: #ffd60a;
+    text-shadow: 0 4px 0 #b8860b, 0 8px 18px #000; }
+  .overlay h2 { margin: 6px 0 24px; font-size: 20px; font-weight: normal; color: #bfe3ff;
+    font-style: italic; }
+  .overlay p { max-width: 560px; line-height: 1.6; color: #dfeefc; }
+  .btn { pointer-events: auto; cursor: pointer; margin: 6px; padding: 14px 34px;
+    font-size: 18px; font-weight: bold; letter-spacing: 1px; color: #062033;
+    background: linear-gradient(180deg, #ffd60a, #f4a300); border: none; border-radius: 30px;
+    box-shadow: 0 4px 0 #b8860b, 0 6px 14px rgba(0,0,0,.5); }
+  .btn:hover { filter: brightness(1.1); }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #b8860b; }
+  .btn.secondary { background: linear-gradient(180deg, #e8f4ff, #9fc6e8); box-shadow: 0 4px 0 #5b7d9c; }
+  #howto { margin-top: 18px; padding: 14px 22px; background: rgba(0,0,0,.5);
+    border: 1px solid rgba(255,255,255,.3); border-radius: 12px; text-align: left;
+    font-size: 14px; line-height: 1.8; }
+  #gameover-title.red { color: #ff5a5a; text-shadow: 0 4px 0 #7a1010, 0 8px 18px #000; }
+  #status { position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+</head>
+<body>
+<canvas id="game" aria-label="Solmar Bay: game open-world crime 3D di browser"></canvas>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <canvas id="minimap" width="200" height="200"></canvas>
+  <div id="wanted" aria-label="Level buronan">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+  <div id="objective">Selamat datang di Solmar Bay</div>
+  <div id="money">$250</div>
+  <div id="health-wrap">
+    <div class="label">NYAWA</div>
+    <div id="health-bar-outer"><div id="health-bar"></div></div>
+  </div>
+  <div id="speed">0 km/jam</div>
+  <div id="ammo">Tinju</div>
+  <div id="message"></div>
+  <div id="controls-hint">WASD jalan &middot; Shift lari &middot; E masuk/keluar mobil<br>
+    F / klik tembak &middot; R isi peluru &middot; Space rem tangan &middot; Esc jeda &middot; M bisu</div>
+</div>
+
+<!-- Menu utama -->
+<div id="menu" class="overlay">
+  <h1>SOLMAR BAY</h1>
+  <h2>Kota ini milikmu &mdash; rebutlah</h2>
+  <p>Game open-world crime 3D di browser. Jelajahi kota pantai Solmar Bay,
+    curi mobil, kabur dari polisi, dan selesaikan misi untuk menguasai kota.</p>
+  <div>
+    <button id="btn-start" class="btn">MULAI</button>
+    <button id="btn-continue" class="btn secondary">LANJUTKAN</button>
+    <button id="btn-howto" class="btn secondary">CARA MAIN</button>
+  </div>
+  <div id="howto" class="hidden">
+    <b>CARA MAIN</b><br>
+    WASD / panah &mdash; jalan &nbsp;|&nbsp; Shift &mdash; lari<br>
+    E &mdash; masuk / keluar mobil &nbsp;|&nbsp; F atau klik kiri &mdash; tembak<br>
+    R &mdash; isi ulang peluru &nbsp;|&nbsp; Space &mdash; rem tangan / aksi<br>
+    Seret mouse &mdash; putar kamera &nbsp;|&nbsp; Roda mouse &mdash; zoom<br>
+    Esc &mdash; jeda &nbsp;|&nbsp; M &mdash; bisu<br>
+    Ikuti penanda objektif di minimap. Semakin banyak bintang buronan,
+    semakin agresif polisi Solmar Bay mengejarmu.
+  </div>
+</div>
+
+<!-- Jeda -->
+<div id="pause" class="overlay hidden">
+  <h1>JEDA</h1>
+  <h2>Solmar Bay menunggumu&hellip;</h2>
+  <div>
+    <button id="btn-resume" class="btn">LANJUTKAN</button>
+    <button id="btn-save" class="btn secondary">SIMPAN</button>
+    <button id="btn-menu" class="btn secondary">MENU UTAMA</button>
+  </div>
+</div>
+
+<!-- Game over / tertangkap / tamat -->
+<div id="gameover" class="overlay hidden">
+  <h1 id="gameover-title" class="red">GAME OVER</h1>
+  <h2 id="gameover-text">Kamu kehabisan nyawa di jalanan Solmar Bay.</h2>
+  <div>
+    <button id="btn-restart" class="btn">MAIN LAGI</button>
+    <button id="btn-menu-over" class="btn secondary">MENU UTAMA</button>
+  </div>
+</div>
+
+<p id="status" role="status" aria-live="polite"></p>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
